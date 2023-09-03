@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cy.mapper.UserMapper">
+    <resultMap id="userResultMap" type="user">
+        <result property="registerTime" column="register_time" />
+        <result property="errorCnt" column="error_cnt" />
+    </resultMap>
+
+    <select id="selectByEmail" resultMap="userResultMap">
+        select * from user
+        where email = #{email}
+    </select>
+
+    <insert id="add">
+        insert into user(username,password,email,register_time,phone)
+        values (#{username},#{password},#{email},#{registerTime},#{phone})
+    </insert>
+
+    <select id="selectUser" resultMap="userResultMap">
+        select * from user
+        where email = #{email} and password = #{password}
+    </select>
+
+    <select id="selectByCondition" resultMap="userResultMap">
+        select * from user
+        <where>
+            <if test="id != null and id != '' ">
+                id = #{id}
+            </if>
+            <if test="username != null and username != '' ">
+                <bind name="usernameLike" value="'%' + username + '%'" />
+                and username like #{usernameLike}
+            </if>
+            <if test="email != null and email != '' ">
+                <bind name="emailLike" value="'%' + email + '%'" />
+                and email like #{emailLike}
+            </if>
+        </where>
+    </select>
+
+    <delete id="deleteByIds">
+        delete from user where id in
+        <foreach collection="ids" item="id" open="(" close=")" separator=",">#{id}</foreach>
+    </delete>
+
+    <delete id="deleteById">
+        delete from user where id = #{id}
+    </delete>
+
+    <update id="updateTotalById">
+        update user
+        set total = total + #{add}
+        where id = #{id}
+    </update>
+
+    <update id="updatePassword">
+        update user
+        set password = #{password}
+        where id = #{id}
+    </update>
+
+    <update id="updateLevel">
+        update user
+        set level = #{level}
+        where id = #{id}
+    </update>
+
+    <update id="addErrorCnt">
+        update user
+        set error_cnt = error_cnt + 1
+        where email = #{email}
+    </update>
+
+    <update id="clearErrorCnt">
+        update user
+        set error_cnt = 0
+        where email = #{email}
+    </update>
+
+    <select id="checkErrorCnt" resultType="java.lang.Integer">
+        select error_cnt from user
+        where email = #{email}
+    </select>
+
+    <select id="selectByEmailAndUsername" resultType="java.lang.Integer">
+        select id from user
+        where email = #{email} and username = #{username}
+    </select>
+</mapper>

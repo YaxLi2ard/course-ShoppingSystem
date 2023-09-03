@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cy.mapper.BrandMapper">
+    <resultMap id="brandResultMap" type="brand">
+        <result property="brandName" column="brand_name" />
+        <result property="companyName" column="company_name" />
+        <result property="stockPrice" column="stock_price" />
+        <result property="retailPrice" column="retail_price" />
+    </resultMap>
+
+    <resultMap id="orderResultMap" type="order">
+        <result property="brandId" column="brand_id" />
+        <result property="userId" column="user_id" />
+    </resultMap>
+
+    <select id="selectByCondition" resultMap="brandResultMap">
+        select * from brand
+        <where>
+            <if test="brandName != null and brandName != '' ">
+                <bind name="brandNameLike" value="'%' + brandName + '%'" />
+                brand_name like #{brandNameLike}
+            </if>
+            <if test="companyName != null and companyName != '' ">
+                <bind name="companyNameLike" value="'%' + companyName + '%'" />
+                and company_name like #{companyNameLike}
+            </if>
+            <if test="type != null and type != '' ">
+                <bind name="typeLike" value="'%' + type + '%'" />
+                and type like #{typeLike}
+            </if>
+        </where>
+    </select>
+
+    <select id="selectById" resultMap="brandResultMap">
+        select * from brand where id = #{id}
+    </select>
+
+    <insert id="add">
+        insert into brand
+        values(null,#{brandName},#{companyName},#{date},#{type},#{stockPrice},#{retailPrice},#{count})
+    </insert>
+
+    <delete id="deleteByIds">
+        delete from brand where id in
+        <foreach collection="ids" item="id" open="(" close=")" separator=",">#{id}</foreach>
+    </delete>
+
+    <update id="updateById">
+        update brand
+        set brand_name = #{brandName}, company_name = #{companyName}, date = #{date},
+            type = #{type}, stock_price = #{stockPrice}, retail_price = #{retailPrice}, count = #{count}
+        where id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        delete from brand where id = #{id}
+    </delete>
+
+    <select id="selectOrders" resultMap="orderResultMap">
+        select * from historical_order where user_id = #{userId}
+    </select>
+
+</mapper>

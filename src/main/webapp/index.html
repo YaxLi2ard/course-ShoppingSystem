@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="ch">
+<head>
+    <meta charset="UTF-8">
+    <title>商品</title>
+</head>
+<body>
+
+<div id="app" style="display: none;" :style="{display: 'block'}">
+    <div class="nav">
+        <el-menu :default-active="activeIndex" class="el-menu-demo" mode="horizontal">
+            <el-menu-item index="1">商品</el-menu-item>
+            <el-menu-item index="2" @click="gotoPage('/shopping-cart')">购物车</el-menu-item>
+            <el-menu-item index="3" @click="gotoPage('/historical-orders')">历史订单</el-menu-item>
+            <el-menu-item v-if="isLogin" index="5" @click="gotoPage('/user-center')"
+            style="margin-left: 999px" >{{userInfo.username}}</el-menu-item>
+            <el-menu-item v-else index="5" @click="gotoPage('/login')"
+            style="margin-left: 999px" >登录</el-menu-item>
+            <el-menu-item index="6" :disabled="!isLogin" @click="logout">登出</el-menu-item>
+        </el-menu>
+    </div>
+
+
+    <div class="container">
+        <!-- 商品管理 -->
+
+        <!--搜索表单-->
+        <el-form :inline="true" class="demo-form-inline">
+
+            <el-form-item label="企业名称">
+                <el-input v-model="searchBrand.companyName" placeholder="企业名称" maxlength="15" show-word-limit></el-input>
+            </el-form-item>
+
+            <el-form-item label="品牌名称">
+                <el-input v-model="searchBrand.brandName" placeholder="品牌名称" maxlength="15" show-word-limit></el-input>
+            </el-form-item>
+
+            <el-form-item label="型号">
+                <el-input v-model="searchBrand.type" placeholder="型号" maxlength="15" show-word-limit></el-input>
+            </el-form-item>
+
+            <el-form-item>
+                <el-button type="primary" @click="onSubmit">搜索</el-button>
+            </el-form-item>
+        </el-form>
+
+        <!--加入购物车或购买对话框-->
+        <el-dialog
+                :title="dialogTitle"
+                :visible.sync="dialogVisible"
+                width="30%"
+                style="text-align: center"
+        >
+            <div style="margin: 30px;font-size: 16px;font-weight: bold">总金额:{{total}}</div>
+            <el-input-number v-model="count" :min="1" :max="maxCount" @change="handleCountChange"></el-input-number>
+            <el-button v-if="addOrPurchase == 1" type="success" icon="el-icon-check" circle @click="add"
+            style="margin-left: 10px"></el-button>
+            <el-button v-else type="success" icon="el-icon-check" circle @click="orderDialog = true"
+            style="margin-left: 10px"></el-button>
+        </el-dialog>
+
+        <!--模拟购买对话框-->
+        <el-dialog
+                title="模拟购买流程"
+                :visible.sync="purchaseDialog"
+                width="30%"
+                style="text-align: center"
+        >
+            <div>
+                <div>正在进行付款...</div>
+                <i class="el-icon-loading"></i>
+            </div>
+        </el-dialog>
+
+        <!--确认订单对话框-->
+        <el-dialog
+                title="请确认订单"
+                :visible.sync="orderDialog"
+                width="30%"
+                style="text-align: center"
+        >
+            <div v-if="tableData.length > 0">
+                <h3 class="order_item">用户名称 : {{userInfo.username}}</h3>
+                <h3 class="order_item">企业名称 : {{tableData[clickIndex].companyName}}</h3>
+                <h3 class="order_item">品牌名称 : {{tableData[clickIndex].brandName}}</h3>
+                <h3 class="order_item">生产日期 : {{tableData[clickIndex].date}}</h3>
+                <h3 class="order_item">购买数量 : {{count}}</h3>
+                <h3 class="order_item">支付金额 : {{total}}</h3>
+                <el-button @click="purchase(true)" type="success" icon="el-icon-check" circle></el-button>
+                <el-button @click="purchase(false)" type="danger" icon="el-icon-close" circle></el-button>
+            </div>
+        </el-dialog>
+
+        <!--表格-->
+        <template>
+            <el-table
+                    v-loading="loading"
+                    :data="tableData"
+                    style="width: 100%"
+                    :row-class-name="tableRowClassName"
+            >
+                <el-table-column
+                        type="selection"
+                        width="55">
+                </el-table-column>
+
+                <el-table-column
+                        type="index"
+                        width="50">
+                </el-table-column>
+
+                <el-table-column
+                        prop="companyName"
+                        label="企业名称"
+                        align="center"
+                >
+                </el-table-column>
+
+                <el-table-column
+                        prop="brandName"
+                        label="品牌名称"
+                        align="center"
+                >
+                </el-table-column>
+
+                <el-table-column
+                        prop="date"
+                        align="center"
+                        label="生产日期">
+                </el-table-column>
+
+                <el-table-column
+                        prop="type"
+                        align="center"
+                        label="型号">
+                </el-table-column>
+
+                <el-table-column
+                        prop="retailPrice"
+                        align="center"
+                        label="价格">
+                </el-table-column>
+
+                <el-table-column
+                        prop="count"
+                        align="center"
+                        label="数量">
+                </el-table-column>
+
+
+                <el-table-column
+                        align="center"
+                        label="操作">
+
+                    <template slot-scope="scope">
+                        <el-button type="primary" icon="el-icon-shopping-cart-2" circle @click="preAdd(scope.$index)"></el-button>
+                        <el-button type="success" icon="el-icon-shopping-bag-1" circle @click="prePurchase(scope.$index)"></el-button>
+                    </template>
+
+                </el-table-column>
+
+            </el-table>
+        </template>
+
+    </div>
+</div>
+
+<style>
+
+.order_item {
+    text-align: left;
+    /*background-color: #3a8ee6;*/
+    margin-left: 90px;
+}
+
+</style>
+
+<script src="js/vue.js"></script>
+<script src="js/axios-0.18.0.js"></script>
+<script src="element-ui/lib/index.js"></script>
+<link rel="stylesheet" href="element-ui/lib/theme-chalk/index.css">
+<link rel="stylesheet" href="css/index-admin.css">
+
+
+<script>
+    new Vue({
+        el: "#app",
+
+        data() {
+            return {
+                // 加载
+                loading: false,
+                // 用户是否登录
+                isLogin: false,
+                // 登录的用户信息
+                userInfo: {},
+                // 选中的index
+                clickIndex: 0,
+                activeIndex: '1',
+                // 添加购物车或购买的对话框显示
+                dialogVisible: false,
+                // 模拟购买流程的对话框显示
+                purchaseDialog: false,
+                // 确认订单的对话框显示
+                orderDialog: false,
+                // 加入购物车还是购买
+                addOrPurchase: 1,
+                dialogTitle: '',
+                // 选择的数量
+                count: 1,
+                // 选择的商品的最大数量
+                maxCount: 1,
+                // 选择的总金额
+                total: 0,
+                //搜索模型数据
+                searchBrand: {
+                    brandName: '',
+                    companyName: '',
+                    type: ''
+                },
+                tableData: []
+            }
+        },
+
+        //Vue生命周期函数---页面加载完后执行
+        mounted(){
+            this.loading = true;
+            if(localStorage.getItem("isLogin") != null){
+                this.userInfo = JSON.parse(localStorage.getItem("isLogin"));
+                this.isLogin = true;
+                // alert("已登录!");
+            }
+            this.selectAll();
+            setTimeout(() => {
+                this.loading = false;
+            },0);
+        },
+
+        methods: {
+            tableRowClassName({row, rowIndex}) {
+                if ((rowIndex+1)%6==0) {
+                    return 'warning-row';
+                } else if ((rowIndex+1)%3==0) {
+                    return 'success-row';
+                }
+                return '';
+            },
+            selectAll(){
+                axios({
+                    method:"post",
+                    url:"http://localhost:999/ShoppingSystem/brand/selectByCondition",
+                    data:this.searchBrand
+                }).then(resp => {
+                    this.tableData = resp.data;
+                })
+            },
+            // 查询
+            onSubmit() {
+                this.selectAll();
+            },
+            preAdd(index) {
+                if(!this.isLogin){
+                    this.remindLogin(false);
+                    return;
+                }
+                this.dialogVisible = true;
+                this.addOrPurchase = 1;
+                this.dialogTitle = '添加至购物车';
+                this.count = 1;
+                this.maxCount = this.tableData[index].count;
+                this.total = this.tableData[index].retailPrice;
+                this.clickIndex = index;
+            },
+
+            prePurchase(index) {
+                if(!this.isLogin){
+                    this.remindLogin(false);
+                    return;
+                }
+                this.dialogVisible = true;
+                this.addOrPurchase = 2;
+                this.dialogTitle = '购买';
+                this.count = 1;
+                this.maxCount = this.tableData[index].count;
+                this.total = this.tableData[index].retailPrice;
+                this.clickIndex = index;
+            },
+
+            handleCountChange() {
+              this.total = parseInt(this.tableData[this.clickIndex].retailPrice) * parseInt(this.count);
+            },
+
+            add() {
+                const userId = this.userInfo.id;
+                const brandId = this.tableData[this.clickIndex].id;
+                const count = this.count;
+                axios({
+                    method:"get",
+                    url:"http://localhost:999/ShoppingSystem/brand/addCart?userId="+userId+"&brandId="+brandId+"&count="+count,
+                }).then(resp => {
+                    if(resp.data === "success"){
+                        this.$message({
+                            type: 'success',
+                            message: '添加购物车成功!'
+                        });
+                        this.dialogVisible = false;
+                    }
+                    else if(resp.data === "alreadyIn"){
+                        this.$confirm('该商品已存在于购物车,是否要修改为目前所选数量?', '提示', {
+                            confirmButtonText: '确定',
+                            cancelButtonText: '取消',
+                            type: 'info'
+                        }).then(() => {
+                            //点击确定
+                            axios({
+                                method:"get",
+                                url:"http://localhost:999/ShoppingSystem/brand/updateCart?userId="+userId+"&brandId="+brandId+"&count="+count,
+                            }).then(resp => {
+                                this.$message({
+                                    type: 'success',
+                                    message: '购物车更新成功!'
+                                });
+                                this.dialogVisible = false;
+                            })
+                        }).catch(() => {
+                            //点击取消
+                            this.$message({
+                                type: 'info',
+                                message: '已取消'
+                            });
+                        });
+                    }
+                })
+            },
+
+            purchase(flag) {
+                this.orderDialog = false;
+                if(flag){
+                    this.dialogVisible = false;
+                    this.purchaseDialog = true;
+                    setTimeout(() => {
+                        this.purchaseDialog = false;
+
+                        const userId = this.userInfo.id;
+                        const brandId = this.tableData[this.clickIndex].id;
+                        const count = this.count;
+                        axios({
+                            method:"get",
+                            url:"http://localhost:999/ShoppingSystem/brand/purchase?userId="+userId+"&brandId="+brandId+"&count="+count,
+                        }).then(resp => {
+                            if(resp.data === "failed"){
+                                this.$message({
+                                    type: 'info',
+                                    message: '超过商品剩余数量，请重新选择数量!'
+                                });
+                            }
+                            if(resp.data === "success"){
+                                this.selectAll();
+                                this.$message({
+                                    type: 'success',
+                                    message: '已完成订单!'
+                                });
+                            }
+                        })
+                    }, 999);
+                }
+                else{
+                    this.$message({
+                        type: 'info',
+                        message: '已取消订单'
+                    });
+                }
+            },
+
+            remindLogin(isRefresh) {
+                this.$confirm('登录才可以使用该功能,是否前往登录', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'info'
+                }).then(() => {
+                    //点击确定
+                    window.location.href = "/ShoppingSystem/login.html";
+                }).catch(() => {
+                    //点击取消
+                    if(isRefresh){
+                        location.reload();
+                    }
+                });
+            },
+
+            logout() {
+                this.$confirm('确定要登出当前账户吗', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'info'
+                }).then(() => {
+                    //点击确定
+                    localStorage.removeItem("isLogin");
+                    this.$message({
+                        type: 'success',
+                        message: '已登出'
+                    });
+                    location.reload();
+                }).catch(() => {
+                    //点击取消
+
+                });
+            },
+
+            gotoPage(routePath) {
+                if(routePath === "/shopping-cart" || routePath === '/historical-orders'){
+                    if(this.isLogin){
+                        window.location.href = '/ShoppingSystem'+routePath+'.html';
+                    }
+                    else{
+                        this.remindLogin(true);
+                    }
+                }
+                else{
+                    window.location.href = "/ShoppingSystem/"+routePath+".html";
+                }
+            }
+
+        },
+    })
+</script>
+</body>
+</html>

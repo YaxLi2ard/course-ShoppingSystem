@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cy.mapper.ShoppingCartMapper">
+
+    <select id="selectCountById" resultType="java.lang.Integer">
+        select count from shopping_cart
+        where user_id = #{userId} and brand_id = #{brandId}
+    </select>
+
+    <select id="selectBrandIds" resultType="java.lang.Integer">
+        select brand_id from shopping_cart
+        where user_id = #{id}
+    </select>
+
+    <select id="selectCounts" resultType="java.lang.Integer">
+        select count from shopping_cart
+        where user_id = #{id}
+    </select>
+
+    <insert id="addCart">
+        insert into shopping_cart
+        values(#{userId},#{brandId},#{count})
+    </insert>
+
+    <update id="updateCart">
+        update shopping_cart
+        set count = #{count}
+        where user_id = #{userId} and brand_id = #{brandId}
+    </update>
+
+    <delete id="removeCart">
+        delete from shopping_cart
+        where user_id = #{userId} and brand_id = #{brandId}
+    </delete>
+
+    <insert id="addOrder">
+        insert into historical_order
+        values(#{userId},#{brandId},#{count},#{total},#{date})
+    </insert>
+
+    <delete id="deleteByUserId">
+        delete from shopping_cart
+        where user_id = #{userId}
+    </delete>
+
+    <delete id="deleteByBrandId">
+        delete from shopping_cart
+        where brand_id = #{brandId}
+    </delete>
+</mapper>

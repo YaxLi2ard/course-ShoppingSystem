@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ch">
+<head>
+  <meta charset="UTF-8">
+  <title>用户中心</title>
+</head>
+<body>
+<div id="app" style="display: none;" :style="{display: 'block'}">
+  <div class="nav">
+    <el-menu :default-active="activeIndex" class="el-menu-demo" mode="horizontal">
+      <el-menu-item index="1" @click="gotoPage('/index')">商品</el-menu-item>
+      <el-menu-item index="2" @click="gotoPage('/shopping-cart')">购物车</el-menu-item>
+      <el-menu-item index="3" @click="gotoPage('/historical-orders')">历史订单</el-menu-item>
+      <el-menu-item index="5" @click=""
+                    style="margin-left: 999px" >{{userInfo.username}}</el-menu-item>
+      <el-menu-item index="6" @click="logout">登出</el-menu-item>
+    </el-menu>
+  </div>
+
+  <div id="container">
+    <div id="list">
+      <h3 class="item">
+        <i class="el-icon-s-custom"></i>
+        类型 : {{userType}}
+      </h3>
+      <h3 class="item">
+        <i class="el-icon-user"></i>
+        用户名 : {{userInfo.username}}
+      </h3>
+      <h3 class="item">
+        <i class="el-icon-bell"></i>
+        邮箱 : {{userInfo.email}}
+      </h3>
+      <h3 class="item">
+        <i class="el-icon-phone-outline"></i>
+        电话 : {{userInfo.phone}}
+      </h3>
+      <h3 class="item">
+        <i class="el-icon-time"></i>
+        注册时间 : {{userInfo.registerTime}}
+      </h3>
+      <h3 class="item">
+        <i class="el-icon-coin"></i>
+        消费金额 : {{userInfo.total}}
+      </h3>
+      <h3 class="item">
+        <i class="el-icon-medal"></i>
+        等级 : {{userInfo.level}}
+      </h3>
+      <el-progress type="circle" :percentage="percentage" :format="format"></el-progress>
+      <div>{{levelInfo}}</div>
+    </div>
+    <el-button type="primary" @click="gotoPage('/modify-password')">修改密码</el-button>
+
+  </div>
+
+</div>
+
+<style>
+  #container {
+    position: relative;
+    width: 30%;
+    margin: 100px auto;
+    border: 1px solid #3a8ee6;
+    background-color: #f7f7f7;
+    padding: 21px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    border-radius: 5px;
+    text-align: center;
+  }
+  #list {
+    text-align: left;
+  }
+</style>
+
+<script src="js/vue.js"></script>
+<script src="js/axios-0.18.0.js"></script>
+<script src="element-ui/lib/index.js"></script>
+<link rel="stylesheet" href="element-ui/lib/theme-chalk/index.css">
+<link rel="stylesheet" href="css/register.css">
+
+<!--ATBWYFNKNMQAQWKN-->
+<script>
+  new Vue({
+    el: "#app",
+
+    data() {
+      return {
+        activeIndex: '5',
+        userInfo: {},
+        userType: '用户',
+        percentage: 0,
+        total: 100,
+        require: 0,
+        levelInfo: '',
+      }
+    },
+
+    //Vue生命周期函数---页面加载完后执行
+    mounted(){
+      this.userInfo = JSON.parse(localStorage.getItem("isLogin"));
+      // 重新查询用户信息
+      this.select();
+
+      // 更新用户等级
+      axios({
+        method:"get",
+        url:"http://localhost:999/ShoppingSystem/user/updateLevel?id="+this.userInfo.id+"&total="+this.userInfo.total
+      }).then(resp => {
+
+      });
+    },
+
+    methods: {
+      select() {
+        axios({
+          method:"get",
+          url:"http://localhost:999/ShoppingSystem/user/selectUserByEmail?email="+this.userInfo.email
+        }).then(resp => {
+          this.userInfo = resp.data;
+          localStorage.setItem("isLogin", JSON.stringify(resp.data));
+          if(this.userInfo.type === '1') this.userType = '管理员';
+
+          const total = this.userInfo.total;
+          if(total < 10000){
+            this.userInfo.level = '铜牌';
+            this.require = 10000;
+            this.percentage = total / 10000 * 100;
+          }
+          else if(total < 100000){
+            this.userInfo.level = '银牌';
+            this.require = 100000;
+            this.percentage = total / 100000 * 100;
+          }
+          else{
+            this.userInfo.level = '金牌';
+            this.require = "∞";
+            this.percentage = 100;
+          }
+        });
+      },
+
+      format(percentage) {
+        return this.userInfo.total + "/" + this.require;
+      },
+
+      gotoPage(routePath) {
+        window.location.href = "/ShoppingSystem/"+routePath+".html";
+      },
+
+      logout() {
+        this.$confirm('确定要登出当前账户吗', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'info'
+        }).then(() => {
+          //点击确定
+          localStorage.removeItem("isLogin");
+          this.$message({
+            type: 'success',
+            message: '已登出'
+          });
+          window.location.href = "index.html";
+        }).catch(() => {
+          //点击取消
+
+        });
+      },
+    }
+  })
+</script>
+
+</body>
+</html>

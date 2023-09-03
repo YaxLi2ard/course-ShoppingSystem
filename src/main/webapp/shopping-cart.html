@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ch">
+<head>
+    <meta charset="UTF-8">
+    <title>购物车</title>
+</head>
+<body>
+
+<div id="app" style="display: none;" :style="{display: 'block'}">
+    <div class="nav">
+        <el-menu :default-active="activeIndex" class="el-menu-demo" mode="horizontal">
+            <el-menu-item index="1" @click="gotoPage('/index')">商品</el-menu-item>
+            <el-menu-item index="2" @click="">购物车</el-menu-item>
+            <el-menu-item index="3" @click="gotoPage('/historical-orders')">历史订单</el-menu-item>
+            <el-menu-item index="5" @click="gotoPage('/user-center')"
+                          style="margin-left: 999px" >{{userInfo.username}}</el-menu-item>
+            <el-menu-item index="6" @click="logout">登出</el-menu-item>
+        </el-menu>
+    </div>
+
+
+    <div class="container">
+        <!--模拟购买对话框-->
+        <el-dialog
+                title="模拟购买流程"
+                :visible.sync="purchaseDialog"
+                width="30%"
+                style="text-align: center"
+        >
+            <div>
+                <div>正在进行付款...</div>
+                <i class="el-icon-loading"></i>
+            </div>
+        </el-dialog>
+
+        <!--确认订单对话框-->
+        <el-dialog
+                title="请确认订单"
+                :visible.sync="orderDialog"
+                width="30%"
+                style="text-align: center"
+        >
+            <div v-if="tableData.length > 0">
+                <h3 class="order_item">用户名称 : {{userInfo.username}}</h3>
+                <h3 class="order_item">企业名称 : {{tableData[clickIndex].brand.companyName}}</h3>
+                <h3 class="order_item">品牌名称 : {{tableData[clickIndex].brand.brandName}}</h3>
+                <h3 class="order_item">生产日期 : {{tableData[clickIndex].brand.date}}</h3>
+                <h3 class="order_item">购买数量 : {{tableData[clickIndex].count}}</h3>
+                <h3 class="order_item">支付金额 : {{tableData[clickIndex].count * tableData[clickIndex].brand.retailPrice}}</h3>
+                <el-button @click="purchase(true)" type="success" icon="el-icon-check" circle></el-button>
+                <el-button @click="purchase(false)" type="danger" icon="el-icon-close" circle></el-button>
+            </div>
+        </el-dialog>
+
+        <!--表格-->
+        <template>
+            <el-table
+                    v-loading="loading"
+                    :data="tableData"
+                    style="width: 100%"
+                    :row-class-name="tableRowClassName"
+            >
+                <el-table-column
+                        type="index"
+                        width="50">
+                </el-table-column>
+
+                <el-table-column
+                        prop="brand.companyName"
+                        label="企业名称"
+                        align="center"
+                >
+                </el-table-column>
+
+                <el-table-column
+                        prop="brand.brandName"
+                        label="品牌名称"
+                        align="center"
+                >
+                </el-table-column>
+
+                <el-table-column
+                        prop="brand.date"
+                        align="center"
+                        label="生产日期">
+                </el-table-column>
+
+                <el-table-column
+                        prop="brand.type"
+                        align="center"
+                        label="型号">
+                </el-table-column>
+
+                <el-table-column
+                        prop="brand.retailPrice"
+                        align="center"
+                        label="价格">
+                </el-table-column>
+
+                <el-table-column
+                        prop="brand.count"
+                        align="center"
+                        label="剩余数量">
+                </el-table-column>
+
+                <el-table-column
+                        prop="copyCount"
+                        align="center"
+                        label="购物车数量">
+                </el-table-column>
+
+                <el-table-column
+                        align="center"
+                        label="购买数量">
+                    <template slot-scope="scope" style="display: flex">
+                        <el-input-number v-model="scope.row.count" :min="1" :max="scope.row.brand.count"
+                                         @change="" size="mini" controls-position="right">
+                        </el-input-number>
+                    </template>
+
+                </el-table-column>
+
+
+                <el-table-column
+                        align="center"
+                        label="操作">
+
+                    <template slot-scope="scope">
+                        <el-button :disabled="scope.row.count == scope.row.copyCount" type="success" icon="el-icon-shopping-bag-1" circle @click="changeCount(scope.$index)"></el-button>
+                        <el-button type="primary" icon="el-icon-shopping-cart-2" circle @click="prePurchase(scope.$index)"></el-button>
+                        <el-button type="danger" icon="el-icon-delete" circle @click="remove(scope.$index)"></el-button>
+                    </template>
+
+                </el-table-column>
+
+            </el-table>
+        </template>
+
+    </div>
+</div>
+
+
+<style>
+
+    .order_item {
+        text-align: left;
+        /*background-color: #3a8ee6;*/
+        margin-left: 90px;
+    }
+
+</style>
+
+<script src="js/vue.js"></script>
+<script src="js/axios-0.18.0.js"></script>
+<script src="element-ui/lib/index.js"></script>
+<link rel="stylesheet" href="element-ui/lib/theme-chalk/index.css">
+<link rel="stylesheet" href="css/index-admin.css">
+
+
+<script>
+    new Vue({
+        el: "#app",
+
+        data() {
+            return {
+                // 加载
+                loading: false,
+                // 登录的用户信息
+                userInfo: {},
+                activeIndex: '2',
+                // 选中的index
+                clickIndex: 0,
+                // 模拟购买流程的对话框显示
+                purchaseDialog: false,
+                // 确认订单的对话框显示
+                orderDialog: false,
+                //搜索模型数据
+                searchBrand: {
+                    brandName: '',
+                    companyName: '',
+                    type: ''
+                },
+                tableData: []
+            }
+        },
+
+        //Vue生命周期函数---页面加载完后执行
+        mounted(){
+            this.loading = true;
+            this.userInfo = JSON.parse(localStorage.getItem("isLogin"));
+            this.selectAll();
+            setTimeout(() => {
+                this.loading = false;
+            },0);
+        },
+
+        methods: {
+            tableRowClassName({row, rowIndex}) {
+                if ((rowIndex+1)%6==0) {
+                    return 'warning-row';
+                } else if ((rowIndex+1)%3==0) {
+                    return 'success-row';
+                }
+                return '';
+            },
+            selectAll(){
+                axios({
+                    method:"get",
+                    url:"http://localhost:999/ShoppingSystem/brand/selectCartById?userId="+this.userInfo.id,
+                }).then(resp => {
+                    this.tableData = resp.data;
+                    // 给每个对象添加属性:要修改的数量
+                    for (let i = 0; i < this.tableData.length; i++) {
+                        this.tableData[i].copyCount = this.tableData[i].count;
+                    }
+                    console.log(this.tableData);
+                })
+            },
+
+            changeCount(index) {
+                this.$confirm('是否修改购物车中此商品的数量?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'info'
+                }).then(() => {
+                    //点击确定
+                    const userId = this.userInfo.id;
+                    const brandId = this.tableData[index].brand.id;
+                    const count = this.tableData[index].count;
+                    axios({
+                        method:"get",
+                        url:"http://localhost:999/ShoppingSystem/brand/updateCart?userId="+userId+"&brandId="+brandId+"&count="+count,
+                    }).then(resp => {
+                        this.$message({
+                            type: 'success',
+                            message: '数量修改成功!'
+                        });
+                        this.selectAll();
+                    })
+                }).catch(() => {
+                    //点击取消
+                    this.$message({
+                        type: 'info',
+                        message: '已取消修改'
+                    });
+                });
+            },
+
+            remove(index) {
+                const userId = this.userInfo.id;
+                const brandId = this.tableData[index].brand.id;
+                this.$confirm('确定要将此商品移出购物车?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'info'
+                }).then(() => {
+                    //点击确定
+                    axios({
+                        method:"get",
+                        url:"http://localhost:999/ShoppingSystem/brand/removeCart?userId="+userId+"&brandId="+brandId,
+                    }).then(resp => {
+                        this.$message({
+                            type: 'success',
+                            message: '已成功移出购物车'
+                        });
+                        this.selectAll();
+                    })
+                }).catch(() => {
+                    //点击取消
+                    this.$message({
+                        type: 'info',
+                        message: '已取消'
+                    });
+                });
+            },
+
+            prePurchase(index) {
+                this.clickIndex = index;
+                this.orderDialog = true;
+            },
+
+            purchase(flag) {
+                this.orderDialog = false;
+                if(flag){
+                    this.purchaseDialog = true;
+                    setTimeout(() => {
+                        this.purchaseDialog = false;
+
+                        const userId = this.userInfo.id;
+                        const brandId = this.tableData[this.clickIndex].brand.id;
+                        const count = this.tableData[this.clickIndex].count;
+                        // 购买，修改商品数量，用户消费金额并加入历史订单
+                        axios({
+                            method:"get",
+                            url:"http://localhost:999/ShoppingSystem/brand/purchase?userId="+userId+"&brandId="+brandId+"&count="+count,
+                        }).then(resp => {
+                            if(resp.data === "failed"){
+                                this.$message({
+                                    type: 'info',
+                                    message: '超过商品剩余数量，请重新选择数量!'
+                                });
+                            }
+                            if(resp.data === "success"){
+                                // 修改用户购物车
+                                if(count >= this.tableData[this.clickIndex].copyCount){
+                                    // 购买数量大于购物车数量，直接将商品移除购物车
+                                    axios({
+                                        method:"get",
+                                        url:"http://localhost:999/ShoppingSystem/brand/removeCart?userId="+userId+"&brandId="+brandId,
+                                    }).then(resp => {
+                                        this.selectAll();
+                                        this.$message({
+                                            type: 'success',
+                                            message: '已完成订单!'
+                                        });
+                                        setTimeout(() => {
+                                            this.$message({
+                                                type: 'success',
+                                                message: '商品已被移除购物车!'
+                                            });
+                                        },999)
+                                    })
+                                }
+                                else{
+                                    // 购买数量小于购物车数量，修改购物车数量
+                                    const changeCount = this.tableData[this.clickIndex].copyCount - count;
+                                    axios({
+                                        method:"get",
+                                        url:"http://localhost:999/ShoppingSystem/brand/updateCart?userId="+userId+"&brandId="+brandId+"&count="+changeCount,
+                                    }).then(resp => {
+                                        this.selectAll();
+                                        this.$message({
+                                            type: 'success',
+                                            message: '已完成订单!'
+                                        });
+                                        setTimeout(() => {
+                                            this.$message({
+                                                type: 'success',
+                                                message: '商品购买数量已更新!'
+                                            });
+                                        },999);
+                                    })
+                                }
+                            }
+                        })
+                    }, 999);
+                }
+                else{
+                    this.$message({
+                        type: 'info',
+                        message: '已取消订单'
+                    });
+                }
+            },
+
+            logout() {
+                this.$confirm('确定要登出当前账户吗', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'info'
+                }).then(() => {
+                    //点击确定
+                    localStorage.removeItem("isLogin");
+                    this.$message({
+                        type: 'success',
+                        message: '已登出'
+                    });
+                    window.location.href = "index.html";
+                }).catch(() => {
+                    //点击取消
+
+                });
+            },
+
+            gotoPage(routePath) {
+                window.location.href = "/ShoppingSystem/"+routePath+".html";
+            }
+
+        },
+    })
+</script>
+</body>
+</html>

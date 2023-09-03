@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="ch">
+<head>
+    <meta charset="UTF-8">
+    <title>管理员商品管理</title>
+</head>
+<body>
+
+<div id="app" style="display: none;" :style="{display: 'block'}">
+  <div class="nav">
+    <el-menu :default-active="activeIndex" class="el-menu-demo" mode="horizontal">
+      <el-menu-item index="1">商品管理</el-menu-item>
+      <el-menu-item index="2" @click="gotoPage('/ShoppingSystem/users-admin.html')">用户管理</el-menu-item>
+      <el-menu-item index="3"  @click="logout"
+      style="margin-left: 999px">登出</el-menu-item>
+    </el-menu>
+  </div>
+
+
+  <div class="container">
+    <!-- 商品管理 -->
+
+    <!--搜索表单-->
+    <el-form :inline="true" class="demo-form-inline">
+
+      <el-form-item label="企业名称">
+        <el-input v-model="searchBrand.companyName" placeholder="企业名称" maxlength="15" show-word-limit></el-input>
+      </el-form-item>
+
+      <el-form-item label="品牌名称">
+        <el-input v-model="searchBrand.brandName" placeholder="品牌名称" maxlength="15" show-word-limit></el-input>
+      </el-form-item>
+
+      <el-form-item label="型号">
+        <el-input v-model="searchBrand.type" placeholder="型号" maxlength="15" show-word-limit></el-input>
+      </el-form-item>
+
+      <el-form-item>
+        <el-button type="primary" @click="onSubmit">查询</el-button>
+      </el-form-item>
+    </el-form>
+
+    <!--按钮-->
+
+    <el-row>
+
+      <el-button type="danger" plain @click="deleteByIds">批量删除</el-button>
+      <el-button type="primary" plain @click="preAdd">新增</el-button>
+
+    </el-row>
+    <!--添加数据对话框表单-->
+    <el-dialog
+            title="编辑品牌"
+            :visible.sync="dialogVisible"
+            width="30%"
+    >
+
+      <el-form ref="form" :model="brand" label-width="80px">
+        <el-form-item label="品牌名称">
+          <el-input v-model="brand.brandName" maxlength="15" show-word-limit></el-input>
+        </el-form-item>
+
+        <el-form-item label="企业名称">
+          <el-input v-model="brand.companyName" maxlength="15" show-word-limit></el-input>
+        </el-form-item>
+
+        <el-form-item label="型号">
+          <el-input v-model="brand.type" maxlength="15" show-word-limit></el-input>
+        </el-form-item>
+
+        <el-form-item label="生产日期">
+          <el-date-picker
+                  v-model="brand.date"
+                  type="date"
+                  value-format="yyyy-MM-dd"
+                  placeholder="选择日期">
+          </el-date-picker>
+        </el-form-item>
+
+        <el-form-item label="进货价">
+          <el-input type="number" v-model="brand.stockPrice"></el-input>
+        </el-form-item>
+
+        <el-form-item label="零售价">
+          <el-input type="number" v-model="brand.retailPrice"></el-input>
+        </el-form-item>
+
+        <el-form-item label="数量">
+          <el-input type="number" v-model="brand.count"></el-input>
+        </el-form-item>
+
+
+        <el-form-item>
+          <el-button v-if="addOrUpdate === 1" type="primary" @click="addBrand">新增</el-button>
+          <el-button v-else type="primary" @click="update">修改</el-button>
+          <el-button @click="dialogVisible = false">取消</el-button>
+        </el-form-item>
+      </el-form>
+
+    </el-dialog>
+
+
+    <!--表格-->
+    <template>
+      <el-table
+              :data="tableData"
+              style="width: 100%"
+              @selection-change="handleSelectionChange"
+      >
+        <el-table-column
+                type="selection"
+                width="55">
+        </el-table-column>
+
+        <el-table-column
+                type="index"
+                width="50">
+        </el-table-column>
+
+        <el-table-column
+                prop="companyName"
+                label="企业名称"
+                align="center"
+        >
+        </el-table-column>
+
+        <el-table-column
+                prop="brandName"
+                label="品牌名称"
+                align="center"
+        >
+        </el-table-column>
+
+        <el-table-column
+                prop="date"
+                align="center"
+                label="生产日期">
+        </el-table-column>
+
+        <el-table-column
+                prop="type"
+                align="center"
+                label="型号">
+        </el-table-column>
+
+        <el-table-column
+                prop="stockPrice"
+                align="center"
+                label="进货价">
+        </el-table-column>
+
+        <el-table-column
+                prop="retailPrice"
+                align="center"
+                label="零售价">
+        </el-table-column>
+
+        <el-table-column
+                prop="count"
+                align="center"
+                label="数量">
+        </el-table-column>
+
+
+        <el-table-column
+                align="center"
+                label="操作">
+
+          <template slot-scope="scope">
+            <el-button type="primary" icon="el-icon-edit" circle @click="preUpdate(scope.$index)"></el-button>
+            <el-button type="danger" icon="el-icon-delete" circle @click="deleteById(scope.$index)"></el-button>
+          </template>
+
+        </el-table-column>
+
+      </el-table>
+    </template>
+
+  </div>
+</div>
+
+<script src="js/vue.js"></script>
+<script src="js/axios-0.18.0.js"></script>
+<script src="element-ui/lib/index.js"></script>
+<link rel="stylesheet" href="element-ui/lib/theme-chalk/index.css">
+<link rel="stylesheet" href="css/index-admin.css">
+
+
+<script>
+  new Vue({
+    el: "#app",
+
+    data() {
+      return {
+        // 选中的index
+        clickIndex: '',
+        // 新增或修改商品的对话框
+        dialogVisible: false,
+        activeIndex: '1',
+        // 新增为1修改为2
+        addOrUpdate: 1,
+        //搜索模型数据
+        searchBrand: {
+          brandName: '',
+          companyName: '',
+          type: ''
+        },
+        // 品牌模型数据
+        brand: {
+          id: '',
+          brandName: '',
+          companyName: '',
+          date: '',
+          type: '',
+          stockPrice: '',
+          retailPrice: '',
+          count: ''
+        },
+        // 复选框选中数据集合
+        multipleSelection: [],
+        tableData: []
+      }
+    },
+
+    //Vue生命周期函数---页面加载完后执行
+    mounted(){
+      this.selectAll();
+    },
+
+    methods: {
+      selectAll(){
+        axios({
+          method:"post",
+          url:"http://localhost:999/ShoppingSystem/brand/selectByCondition",
+          data:this.searchBrand
+        }).then(resp => {
+          this.tableData = resp.data;
+        })
+      },
+      // 查询
+      onSubmit() {
+        this.selectAll();
+      },
+      // 复选框选中后执行的方法
+      handleSelectionChange(val) {
+        this.multipleSelection = val;
+      },
+      //添加前的准备
+      preAdd(){
+        this.dialogVisible = true;
+        this.addOrUpdate = 1;
+        this.clearBrand();
+      },
+      //更新前的准备
+      preUpdate(index){
+        this.clickIndex = index;
+        this.dialogVisible = true;
+        this.addOrUpdate = 2;
+        const t = this.tableData[index];
+        this.brand = {
+          id: t.id,
+          brandName: t.brandName,
+          companyName: t.companyName,
+          date: t.date,
+          type: t.type,
+          stockPrice: t.stockPrice,
+          retailPrice: t.retailPrice,
+          count: t.count
+        }
+      },
+      // 清空数据
+      clearBrand(){
+        this.brand = {
+          brandName: '',
+          companyName: '',
+          date: '',
+          type: '',
+          stockPrice: '',
+          retailPrice: '',
+          count: ''
+        };
+      },
+      // 更新数据
+      update(){
+        axios({
+          method:"post",
+          url:"http://localhost:999/ShoppingSystem/brand/updateById",
+          data:this.brand
+        }).then(resp => {
+          //添加成功 关闭窗口
+          this.dialogVisible = false;
+
+          //修改成功弹出消息提示
+          this.$message({
+            message: '修改成功!',
+            type: 'success'
+          });
+
+          //重新查询
+          this.selectAll();
+
+        })
+      },
+      // 添加数据
+      addBrand(){
+        var _this = this;
+        _this.addOrUpdate = 1;
+        //发送post请求发送品牌数据
+        axios({
+          method:"post",
+          url:"http://localhost:999/ShoppingSystem/brand/add",
+          data:_this.brand
+        }).then(function (resp){
+          if(resp.data == "success"){
+            //添加成功 关闭窗口
+            _this.dialogVisible = false;
+
+            //添加成功弹出消息提示
+            _this.$message({
+              message: '添加成功!',
+              type: 'success'
+            });
+
+            //重新查询
+            _this.selectAll();
+
+            //清空
+            this.clearBrand();
+          }
+        })
+      },
+      //单个删除
+      deleteById(index){
+        const id = this.tableData[index].id;
+        //弹窗确认
+        this.$confirm('是否删除选中数据', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          //点击确定
+          var _this = this;
+          //发送post请求发送要删除的所有id
+          axios({
+            method:"get",
+            url:"http://localhost:999/ShoppingSystem/brand/deleteById?id="+id
+          }).then(function (resp){
+            if(resp.data == "success"){
+              //删除成功 关闭窗口
+              _this.dialogVisible = false;
+
+              //添加成功弹出消息提示
+              _this.$message({
+                message: '删除成功!',
+                type: 'success'
+              });
+
+              //重新查询
+              _this.selectAll();
+            }
+          })
+        }).catch(() => {
+          //点击取消
+          this.$message({
+            type: 'info',
+            message: '已取消删除'
+          });
+        });
+      },
+      //批量删除
+      deleteByIds(){
+        if(this.multipleSelection.length == 0){
+          this.$message({
+            type: 'info',
+            message: '您未选中任何数据'
+          });
+          return;
+        }
+        //取出id
+        let ids = [];
+        for (let i = 0; i < this.multipleSelection.length; i++) {
+          ids[i]=this.multipleSelection[i].id;
+        }
+        //弹窗确认
+        this.$confirm('是否删除所有选中数据', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          //点击确定
+          var _this = this;
+          //发送post请求发送要删除的所有id
+          axios({
+            method:"post",
+            url:"http://localhost:999/ShoppingSystem/brand/deleteByIds",
+            data:ids
+          }).then(function (resp){
+            if(resp.data == "success"){
+              //添加成功 关闭窗口
+              _this.dialogVisible = false;
+
+              //添加成功弹出消息提示
+              _this.$message({
+                message: '删除成功!',
+                type: 'success'
+              });
+
+              //重新查询
+              _this.selectAll();
+            }
+          })
+        }).catch(() => {
+          //点击取消
+          this.$message({
+            type: 'info',
+            message: '已取消删除'
+          });
+        });
+
+      },
+
+      gotoPage(routePath) {
+        window.location.href = routePath;
+      },
+
+      logout() {
+        this.$confirm('确定要登出当前账户吗', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'info'
+        }).then(() => {
+          //点击确定
+          localStorage.removeItem("isLogin");
+          this.$message({
+            type: 'success',
+            message: '已登出'
+          });
+          window.location.href = '/ShoppingSystem/login.html';
+        }).catch(() => {
+          //点击取消
+
+        });
+      },
+
+    },
+  })
+</script>
+</body>
+</html>

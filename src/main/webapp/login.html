@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ch">
+<head>
+    <meta charset="UTF-8">
+    <title>登录</title>
+</head>
+<body>
+<div id="app" style="display: none;" :style="{display: 'block'}">
+    <div class="container">
+        <a id="tor" href="register.html">去注册</a>
+        <div id="label">登 录</div>
+        <el-form label-width="79px" style="margin-top: 30px">
+            <el-form-item label="邮箱">
+                <el-input v-model="email" maxlength="30" show-word-limit placeholder="EMAIL"></el-input>
+            </el-form-item>
+            <el-form-item label="密码">
+                <el-input type="password" v-model="password" maxlength="30" show-word-limit placeholder="PASSWORD"></el-input>
+            </el-form-item>
+            <el-button type="primary" @click="login">登录</el-button>
+            <el-button type="primary" @click="resetPassword" >忘记密码</el-button>
+        </el-form>
+    </div>
+
+</div>
+
+<style>
+    .container {
+        position: relative;
+        width: 30%;
+        margin: 100px auto;
+        border: 1px solid #3a8ee6;
+        background-color: #f7f7f7;
+        padding: 21px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        border-radius: 5px;
+        text-align: center;
+    }
+
+    #tor{
+        position: absolute;
+        top: 9px;
+        left: 9px;
+        margin-bottom: 10px;
+        font-size: medium;
+    }
+
+    #label{
+        font-size: xx-large;
+        font-weight: bolder;
+    }
+
+</style>
+
+<script src="js/vue.js"></script>
+<script src="js/axios-0.18.0.js"></script>
+<script src="element-ui/lib/index.js"></script>
+<link rel="stylesheet" href="element-ui/lib/theme-chalk/index.css">
+<link rel="stylesheet" href="css/register.css">
+
+<!--ATBWYFNKNMQAQWKN-->
+<script>
+    new Vue({
+        el: "#app",
+
+        data() {
+            return {
+                email: '',
+                password: '',
+            }
+        },
+
+        //Vue生命周期函数---页面加载完后执行
+        mounted(){
+
+        },
+
+        methods: {
+            //登录
+            login(){
+                const _this = this;
+                if(this.email == '' || this.password == '') this.alertWarning("请填写完整!");
+                else{
+                    // alert("进入登录服务！");
+                    axios({
+                        method:"get",
+                        url:"http://localhost:999/ShoppingSystem/user/login?email="+this.email+"&password="+this.password,
+                    }).then(resp => {
+                        if(resp.data == "登录成功!正在跳转,请稍等..."){
+                            _this.alertSuccess(resp.data);
+                            setTimeout(function(){
+                                axios({
+                                    method:"get",
+                                    url:"http://localhost:999/ShoppingSystem/user/selectUserByEmail?email="+_this.email
+                                }).then(resp => {
+                                    localStorage.setItem("isLogin", JSON.stringify(resp.data));
+                                    // alert(resp.data.id);
+                                    if(resp.data.id === 1){
+                                        window.location.href = "/ShoppingSystem/brands-admin.html";
+                                    }
+                                    else{
+                                        window.location.href = "/ShoppingSystem//index.html";
+                                    }
+                                });
+                            },999);
+                        }
+                        else{
+                            _this.alertWarning(resp.data);
+                        }
+                    });
+                }
+            },
+
+            resetPassword(){
+                window.location.href = "/ShoppingSystem/reset-password.html";
+            },
+
+            alertSuccess(information){
+                this.$notify({
+                    title: '成功',
+                    message: information,
+                    type: 'success'
+                });
+            },
+
+            alertWarning(information){
+                this.$notify({
+                    title: '警告',
+                    message: information,
+                    type: 'warning'
+                });
+            }
+
+        },
+    })
+</script>
+
+</body>
+</html>

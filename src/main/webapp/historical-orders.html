@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ch">
+<head>
+  <meta charset="UTF-8">
+  <title>历史订单</title>
+</head>
+<body>
+
+<div id="app" style="display: none;" :style="{display: 'block'}">
+  <div class="nav">
+    <el-menu :default-active="activeIndex" class="el-menu-demo" mode="horizontal">
+      <el-menu-item index="1" @click="gotoPage('/index')">商品</el-menu-item>
+      <el-menu-item index="2" @click="gotoPage('/shopping-cart')">购物车</el-menu-item>
+      <el-menu-item index="3" @click="">历史订单</el-menu-item>
+      <el-menu-item index="5" @click="gotoPage('/user-center')"
+                    style="margin-left: 999px" >{{userInfo.username}}</el-menu-item>
+      <el-menu-item index="6" @click="logout">登出</el-menu-item>
+    </el-menu>
+  </div>
+
+
+  <div class="container">
+    <!--表格-->
+    <template>
+      <el-table
+              v-loading="loading"
+              :data="tableData"
+              style="width: 100%"
+              :row-class-name="tableRowClassName"
+      >
+
+        <el-table-column
+                prop="order.date"
+                label="订单时间"
+                align="center"
+        >
+        </el-table-column>
+
+        <el-table-column
+                prop="brand.companyName"
+                label="企业名称"
+                align="center"
+        >
+        </el-table-column>
+
+        <el-table-column
+                prop="brand.brandName"
+                label="品牌名称"
+                align="center"
+        >
+        </el-table-column>
+
+        <el-table-column
+                prop="brand.date"
+                align="center"
+                label="生产日期">
+        </el-table-column>
+
+        <el-table-column
+                prop="brand.type"
+                align="center"
+                label="型号">
+        </el-table-column>
+
+        <el-table-column
+                prop="order.count"
+                align="center"
+                label="购买数量">
+        </el-table-column>
+
+        <el-table-column
+                prop="order.total"
+                align="center"
+                label="订单花费">
+        </el-table-column>
+
+
+      </el-table>
+    </template>
+
+  </div>
+</div>
+
+
+<style>
+
+
+</style>
+
+<script src="js/vue.js"></script>
+<script src="js/axios-0.18.0.js"></script>
+<script src="element-ui/lib/index.js"></script>
+<link rel="stylesheet" href="element-ui/lib/theme-chalk/index.css">
+<link rel="stylesheet" href="css/index-admin.css">
+
+
+<script>
+  new Vue({
+    el: "#app",
+
+    data() {
+      return {
+        // 加载
+        loading: false,
+        // 登录的用户信息
+        userInfo: {},
+        activeIndex: '3',
+        tableData: []
+      }
+    },
+
+    //Vue生命周期函数---页面加载完后执行
+    mounted(){
+      this.loading = true;
+      this.userInfo = JSON.parse(localStorage.getItem("isLogin"));
+      this.selectAll();
+      setTimeout(() => {
+        this.loading = false;
+      },0);
+    },
+
+    methods: {
+      tableRowClassName({row, rowIndex}) {
+        if ((rowIndex+1)%6===0) {
+          return 'warning-row';
+        } else if ((rowIndex+1)%3===0) {
+          return 'success-row';
+        }
+        return '';
+      },
+
+      selectAll(){
+        axios({
+          method:"get",
+          url:"http://localhost:999/ShoppingSystem/brand/selectOrdersById?userId="+this.userInfo.id,
+        }).then(resp => {
+          this.tableData = resp.data;
+          // 后插入的在前面
+          this.tableData.reverse();
+          console.log(this.tableData);
+        })
+      },
+
+      logout() {
+        this.$confirm('确定要登出当前账户吗', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'info'
+        }).then(() => {
+          //点击确定
+          localStorage.removeItem("isLogin");
+          this.$message({
+            type: 'success',
+            message: '已登出'
+          });
+          window.location.href = "index.html";
+        }).catch(() => {
+          //点击取消
+
+        });
+      },
+
+      gotoPage(routePath) {
+        window.location.href = "/ShoppingSystem/"+routePath+".html";
+      }
+
+    },
+  })
+</script>
+</body>
+</html>

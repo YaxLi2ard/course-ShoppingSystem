@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ch">
+<head>
+    <meta charset="UTF-8">
+    <title>注册</title>
+</head>
+<body>
+<div id="app" style="display: none;" :style="{display: 'block'}">
+    <div class="container">
+        <a id="tor" href="login.html">去登录</a>
+        <div id="label">注 册</div>
+        <el-form class="elform" label-width="79px" style="margin-top: 30px">
+            <el-form-item label="邮箱">
+                <div style="display: flex">
+                    <el-input v-model="userInfo.email" maxlength="30" show-word-limit></el-input>
+                    <el-button type="success" icon="el-icon-s-promotion" circle @click="sendEmail" ref="send_btn" :disabled="isDisabled"></el-button>
+<!--                    <el-button type="primary" @click="sendEmail" ref="send_btn" :disabled="isDisabled">发送验证码</el-button>-->
+                </div>
+<!--                <span style="margin: 0">{{emailResult}}</span>-->
+            </el-form-item>
+            <el-form-item label="验证码">
+                <el-input v-model="verCode" maxlength="6" show-word-limit></el-input>
+            </el-form-item>
+            <el-form-item label="用户名">
+                <el-input v-model="userInfo.username" maxlength="15" show-word-limit placeholder="不少于5个字符,最多10个字符"></el-input>
+            </el-form-item>
+            <el-form-item label="密码">
+                <el-input type="password" v-model="userInfo.password" maxlength="30" show-word-limit placeholder="不少于8个字符，且包含大小写字母、数字及特殊符号,最多10个字符"></el-input>
+            </el-form-item>
+            <el-form-item label="确认密码">
+                <el-input type="password" v-model="confirmPassword" maxlength="30" maxlength="30" show-word-limit></el-input>
+            </el-form-item>
+            <el-form-item label="手机号">
+                <el-input v-model="userInfo.phone" maxlength="11" show-word-limit></el-input>
+            </el-form-item>
+            <el-button type="primary" @click="register">注册</el-button>
+        </el-form>
+    </div>
+
+</div>
+
+<style>
+    .container {
+        position: relative;
+        width: 30%;
+        margin: 100px auto;
+        border: 1px solid #3a8ee6;
+        background-color: #f7f7f7;
+        backdrop-filter: blur(10px);
+        padding: 21px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        border-radius: 5px;
+        text-align: center;
+    }
+
+    #tor{
+        position: absolute;
+        top: 9px;
+        left: 9px;
+        margin-bottom: 10px;
+        font-size: medium;
+    }
+
+    #label{
+        font-size: xx-large;
+        font-weight: bolder;
+    }
+</style>
+
+<script src="js/vue.js"></script>
+<script src="js/axios-0.18.0.js"></script>
+<script src="element-ui/lib/index.js"></script>
+<link rel="stylesheet" href="element-ui/lib/theme-chalk/index.css">
+<link rel="stylesheet" href="css/register.css">
+
+<!--ATBWYFNKNMQAQWKN-->
+<script>
+    new Vue({
+        el: "#app",
+
+        data() {
+            return {
+                userInfo: {
+                    email: '',
+                    username: '',
+                    password: '',
+                    registerTime: '',
+                    phone: ''
+                },
+                confirmPassword: '',
+                emailResult: '',
+                verCode: '',
+                isVer: false,
+                isDisabled: false,
+
+            }
+        },
+
+        //Vue生命周期函数---页面加载完后执行
+        mounted(){
+
+        },
+
+        methods: {
+            // 发送验证码到邮箱
+            sendEmail(){
+                this.emailResult = '请稍等...';
+                axios({
+                    method:"get",
+                    url:"http://localhost:999/ShoppingSystem/user/sendEmail?email="+this.userInfo.email,
+                }).then(resp => {
+                    if(resp.data == 'success'){
+                        this.emailResult = '发送成功!';
+                        this.isVer = true;
+                        this.isDisabled = true;
+                        this.alertSuccess('验证码发送成功!');
+                        return;
+                    }
+                    else if(resp.data == 'failed1'){
+                        this.emailResult = '邮箱地址不合法!';
+                    }
+                    else if(resp.data == 'failed2'){
+                        this.emailResult = '该邮箱已被注册!';
+                    }
+                    else this.emailResult = '发生未知错误!';
+                    this.alertWarning(this.emailResult);
+                });
+            },
+
+            register(){
+                const _this = this;
+                const info = this.userInfo;
+                if(this.isVer == false) this.alertWarning("请先验证邮箱!");
+                else if(this.verCode.length != 6) this.alertWarning("请正确填写6位验证码!");
+                else if(info.username.length<5||info.password.length<8) this.alertWarning("用户名或密码长度不够!");
+                else if(info.password != this.confirmPassword) this.alertWarning("两次密码不一致!");
+                else if(info.phone.length != 11) this.alertWarning("手机号码为11位!");
+                else{
+                    axios({
+                        method:"post",
+                        url:"http://localhost:999/ShoppingSystem/user/register?verCode="+this.verCode,
+                        data:this.userInfo
+                    }).then(resp => {
+                        if(resp.data == "注册成功!正在跳转,请稍等..."){
+                            _this.alertSuccess(resp.data);
+                            setTimeout(function(){
+                                axios({
+                                    method:"get",
+                                    url:"http://localhost:999/ShoppingSystem/user/selectUserByEmail?email="+_this.userInfo.email
+                                }).then(resp => {
+                                    localStorage.setItem("isLogin", JSON.stringify(resp.data));
+                                    if(resp.data.id === 1){
+                                        window.location.href = "/ShoppingSystem/brands-admin.html";
+                                    }
+                                    else{
+                                        window.location.href = "/ShoppingSystem//index.html";
+                                    }
+                                });
+                            },999);
+                        }
+                        else{
+                            _this.alertWarning(resp.data);
+                        }
+                    });
+                }
+            },
+
+            alertSuccess(information){
+                this.$notify({
+                    title: '成功',
+                    message: information,
+                    type: 'success'
+                });
+            },
+
+            alertWarning(information){
+                this.$notify({
+                    title: '警告',
+                    message: information,
+                    type: 'warning'
+                });
+            }
+        },
+    })
+</script>
+
+</body>
+</html>
